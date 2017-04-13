@@ -23,12 +23,17 @@ float arrayAvg = 0; // A running avg of the above
 int sampleArray2[140]; // Should be 90 samples in an hour long session (one each 40 seconds). Extras to be safe.
 long arrayTot2 = 0; // A running sum of the contents of sampleArray to be divided by sampleNum for averaging
 float arrayAvg2 = 0; // A running avg of the above
-byte sessionCount;
+int sessionCount; //= EEPROM.write(0, 0x00);
+int currentAddress; //= EEPROM.write(1,0x15);
+char comma = ',';
+char sColon = ';';
+float sessionComp;
 
 
 void setup(){
  // Initialize what we need in here 
  sessionCount = EEPROM.read(0);
+ currentAddress = EEPROM.read(2);
  // UPLOAD EEPROM SHITE
  pinMode(LED1, OUTPUT);
  pinMode(LED2, OUTPUT);
@@ -42,42 +47,71 @@ void setup(){
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void loop(){
   ArrayAdd(IntensityMap(ChannelSample()), sampleNum);
-  
   ButtonInterrupt();
   
   if (testMode){
     Serial.println("TEST MODE ACTIVE");
-    Serial.print("EEPROM address 0 = ");
-    Serial.println(EEPROM.read(0),HEX);
+    Serial.print("SessionCount DEC ");
+    Serial.print(EEPROM.read(0),HEX);
+    Serial.print(" or HEX ");
     Serial.println(EEPROM.read(0));
+    
+    Serial.print("currentAddress = DEC ");
+    Serial.print(currentAddress);
+    Serial.print(" or HEX ");
+    Serial.println(currentAddress, HEX);
+    
     Serial.print("SampleNumber = "); Serial.println(sampleNum);
     Serial.println("------------Loop Complete-------------");
     delay(500);
   }
-  CheckSession();
+  if ((sampleNum % 10) == 0){
+  WriteStorage();
+  }
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////Is the button being pressed?/////////////////////////////////////////
 void ButtonInterrupt(){
   if (digitalRead(buttonPin)){
     // BLUETOOTH CODE HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   }
 }
-//////////////////////////////////////////////////////////////////////////////////////////
-void CheckSession(){
-  if (sampleNum>90){
-    RehabComplete();
-  }
-}
-//////////////////////////////////////////////////////////////////////////////////////////
-void RehabComplete(){
+///////////////////////Writing to EEPROM///////////////////////////////////////////////////
+void WriteStorage(){
   Serial.println("RehabCompleteNotWritten");
-  sessionCount++;
-  EEPROM.put(0,sessionCount);
-}
-//////////////////////////////////////////////////////////////////////////////////////////
-void PartialEEPROM(){
-  
+  EEPROM.write(currentAddress,sessionCount);
+  currentAddress = currentAddress + 2; //increase by int
+  EEPROM.write(currentAddress,comma);
+  currentAddress++; //increase by char
+  EEPROM.write(currentAddress,arrayAvg);
+  currentAddress = currentAddress + 4; //increase by float
+  EEPROM.write(currentAddress,comma);
+  currentAddress++; //increase by char
+  EEPROM.write(currentAddress,arrayAvg2);
+  currentAddress = currentAddress + 4; //increase by float
+  EEPROM.write(currentAddress,comma);
+  currentAddress++; //increase by char
+  EEPROM.write(currentAddress,sessionComp);
+  currentAddress = currentAddress + 4;  //increase by float
+  EEPROM.write(currentAddress,sColon);
+  currentAddress++; //increase by char
+  if (sampleNum<90){ //Not done - these addresses will be rewritten this session
+    currentAddress = currentAddress - 18;
+  }
+  else{ //session is done
+    sessionCount++;
+    EEPROM.write(0,sessionCount);
+  }
+  if (testMode){
+    Serial.print(sessionCount);
+    Serial.print(',');
+    Serial.print(arrayAvg);
+    Serial.print(',');
+    Serial.print(arrayAvg2);
+    Serial.print(',');
+    Serial.print(sessionComp);
+    Serial.println(';');
+  }
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 void ArrayAdd(float intensityValue, int sampleNum){
@@ -88,6 +122,7 @@ void ArrayAdd(float intensityValue, int sampleNum){
   arrayTot2 = arrayTot2 + intensityValue;
   arrayAvg = arrayTot/(sampleNum+1);
   arrayAvg2 = arrayTot2/(sampleNum+1);
+  sessionComp = samplenum/90;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 int ChannelSample(){ // Return the highest analog input value
