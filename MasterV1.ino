@@ -65,7 +65,8 @@ void loop(){
     Serial.println("------------Loop Complete-------------");
     delay(500);
   }
-  if ((sampleNum % 10) == 0){
+  delay(500);
+  if (((sampleNum+1) % 10) == 0){
   WriteStorage();
   }
 }
@@ -122,7 +123,7 @@ void ArrayAdd(float intensityValue, int sampleNum){
   arrayTot2 = arrayTot2 + intensityValue;
   arrayAvg = arrayTot/(sampleNum+1);
   arrayAvg2 = arrayTot2/(sampleNum+1);
-  sessionComp = samplenum/90;
+  sessionComp = sampleNum/90;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
 int ChannelSample(){ // Return the highest analog input value
@@ -351,7 +352,7 @@ else if (sensorValue >= 683)
 
 	}
 }
-intensity = (intensity*4);
+//intensity = (intensity*4);
 if (testMode){
   Serial.print("Intensity = ");
   Serial.println(intensity);
