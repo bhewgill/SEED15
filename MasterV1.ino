@@ -27,7 +27,7 @@ float arrayAvg2 = 0; // A running avg of the above
 int sessionCount; //= EEPROM.write(0, 0x00);
 int currentAddress; //= EEPROM.write(1,0x01); The above two lines reset board to default
 char comma = ',';
-char sColon = ';';
+int nLine = 10; //corresponds to newline character
 float sessionComp;
 
 
@@ -35,7 +35,6 @@ void setup(){
   // Initialize what we need in here 
   sessionCount = EEPROM.read(0);
   currentAddress = EEPROM.read(2);
-  // UPLOAD EEPROM SHITE
   pinMode(LED1, OUTPUT);
   pinMode(LED2, OUTPUT);
   pinMode(LED3, OUTPUT);
@@ -109,10 +108,10 @@ void WriteStorage(){
   currentAddress++; //increase by char
   EEPROM.writeFloat(currentAddress,sessionComp);
   currentAddress = currentAddress + 4;  //increase by float
-  EEPROM.writeByte(currentAddress,sColon);
-  currentAddress++; //increase by char
+  EEPROM.writeByte(currentAddress,nLine);
+  currentAddress = currentAddress + 2; //increase by newline char
   if (sampleNum<90){ //Not done - these addresses will be rewritten this session
-    currentAddress = currentAddress - 18;
+    currentAddress = currentAddress - 19;
   }
   else{ //session is done
     sessionCount++;
