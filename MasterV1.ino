@@ -4,15 +4,11 @@
 boolean testMode = true;
 
 #include <EEPROMex.h>
-#include <EEPROMAnything.h>
 #include <SPI.h>
 #include <lib_aci.h>
 #include <aci_setup.h>
 #include <RBL_nRF8001.h>
 #include <services.h>
-
-
-
 
 int buttonPin = 8; // pin for sync button
 int LED1 = 2; // Status lights
@@ -29,7 +25,7 @@ int sampleArray2[140]; // Should be 90 samples in an hour long session (one each
 long arrayTot2 = 0; // A running sum of the contents of sampleArray to be divided by sampleNum for averaging
 float arrayAvg2 = 0; // A running avg of the above
 int sessionCount; //= EEPROM.write(0, 0x00);
-int currentAddress; //= EEPROM.write(1,0x15);
+int currentAddress; //= EEPROM.write(1,0x01); The above two lines reset board to default
 char comma = ',';
 char sColon = ';';
 float sessionComp;
@@ -170,8 +166,10 @@ int ChannelSample(){ // Return the highest analog input value
       maxVolt2 = analogRead(sensorPin2);
     }
   }
+  if (testMode){
   Serial.print("MaxDigiVoltage = ");
   Serial.println(maxVolt);
+  }
   return maxVolt;
 }
 ///////////////////////////////////////////////////////////////////////////////////////////
