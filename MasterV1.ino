@@ -3,12 +3,15 @@
 // Capstone Design, Spring 2017
 boolean testMode = true;
 
-#include <EEPROM.h>
+#include <EEPROMex.h>
+#include <EEPROMAnything.h>
 #include <SPI.h>
 #include <lib_aci.h>
 #include <aci_setup.h>
 #include <RBL_nRF8001.h>
 #include <services.h>
+
+
 
 
 int buttonPin = 8; // pin for sync button
@@ -74,50 +77,50 @@ void loop(){
   }
 }
 
-//////////////////////Create a single line of rehab data from memory///////////////////////
-
-
-//////////////////////Is the button being pressed?/////////////////////////////////////////
+////////////Button Inter//////////////////////////////////////////////////////////
 void ButtonInterrupt(){
   if (digitalRead(buttonPin)){
     ble_begin();
-    if (ble_connected()){
-      /////// DO BLUETOOTH THIINGS HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    while (!ble_connected()){
+      ;
     }
-    ble_do_events();
+  }
+  if (ble_connected()){
+    /////// DO BLUETOOTH THIINGS HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  }
+  ble_do_events();
 
-    if (ble_available()){
-      while (ble_available()){
-        Serial.write(ble_read());
-      }
+  if (ble_available()){
+    while (ble_available()){
+      Serial.write(ble_read());
     }
   }
 }
+
 ///////////////////////Writing to EEPROM///////////////////////////////////////////////////
 void WriteStorage(){
-  Serial.println("RehabCompleteNotWritten");
-  EEPROM.write(currentAddress,sessionCount);
+  EEPROM.writeInt(currentAddress,sessionCount);
   currentAddress = currentAddress + 2; //increase by int
-  EEPROM.write(currentAddress,comma);
+  EEPROM.writeByte(currentAddress,comma);
   currentAddress++; //increase by char
-  EEPROM.write(currentAddress,arrayAvg);
+  EEPROM.writeFloat(currentAddress,arrayAvg);
   currentAddress = currentAddress + 4; //increase by float
-  EEPROM.write(currentAddress,comma);
+  EEPROM.writeByte(currentAddress,comma);
   currentAddress++; //increase by char
-  EEPROM.write(currentAddress,arrayAvg2);
+  EEPROM.writeFloat(currentAddress,arrayAvg2);
   currentAddress = currentAddress + 4; //increase by float
-  EEPROM.write(currentAddress,comma);
+  EEPROM.writeByte(currentAddress,comma);
   currentAddress++; //increase by char
-  EEPROM.write(currentAddress,sessionComp);
+  EEPROM.writeFloat(currentAddress,sessionComp);
   currentAddress = currentAddress + 4;  //increase by float
-  EEPROM.write(currentAddress,sColon);
+  EEPROM.writeByte(currentAddress,sColon);
   currentAddress++; //increase by char
   if (sampleNum<90){ //Not done - these addresses will be rewritten this session
     currentAddress = currentAddress - 18;
   }
   else{ //session is done
     sessionCount++;
-    EEPROM.write(0,sessionCount);
+    EEPROM.writeInt(0,sessionCount);
   }
   if (testMode){
     Serial.write(sessionCount);
@@ -377,7 +380,7 @@ float IntensityMap(int sensorValue){
             intensity = 20.0;
           }
         }
-      }		
+      }    
 
     }
   }
