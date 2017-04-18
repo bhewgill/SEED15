@@ -20,7 +20,7 @@ int LED3 = 4;
 int sensorPin1 = A0;    // select the input pin for channel 1
 int sensorPin2 = A1;    // select the input pin for channel 2
 int sensorValue = 0;  // variable to store the value coming from the sensor
-int sampleNum1 = 90;  // Sample number
+int sampleNum1 = 0;  // Sample number
 int sampleNum2 = 0;  // Sample number
 int sampleArray1[140]; // Should be 90 samples in an hour long session (one each 40 seconds). Extras to be safe.
 long arrayTot1 = 0; // A running sum of the contents of sampleArray to be divided by sampleNum for averaging
@@ -78,6 +78,7 @@ void loop(){
   // Channel 1
   ant1=next1;
   next1=analogRead(sensorPin1);
+  delay(1000);
   if (ant1>next1){
     if (maxVal1>ant1){
       maxVal1=ant1;
@@ -87,9 +88,31 @@ void loop(){
       //Intensity Map
       ArrayAdd(IntensityMap(maxVal1),1);
       maxVal1=0;
+      if (testMode){
+        Serial.print("currentAddress = HEX ");
+        Serial.write(currentAddress);
+        Serial.println(currentAddress);
+    
+        Serial.print("SampleNumber = "); 
+        Serial.println(sampleNum1);
+        Serial.println("------------Loop Complete-------------");
+        ButtonInterrupt();
+      }
+      delay(500);
+      if (((sampleNum1+1) % 10) == 0){
+        WriteStorage();
+        ButtonInterrupt();
+      }
     }
   } else {
     maxVal1=next1;
+    Serial.print("currentAddress = HEX ");
+    Serial.write(currentAddress);
+    Serial.println(currentAddress);
+
+    Serial.print("SampleNumber = "); 
+    Serial.println(sampleNum1);
+    Serial.println("------------Loop Complete-------------");
   }
 
   ButtonInterrupt();
@@ -106,49 +129,32 @@ void loop(){
       //Intensity Map
       ArrayAdd(IntensityMap(maxVal2),2);
       maxVal2=0;
+      if (testMode){
+        Serial.print("currentAddress = HEX ");
+        Serial.write(currentAddress);
+        Serial.println(currentAddress);
+    
+        Serial.print("SampleNumber = "); 
+        Serial.println(sampleNum2);
+        Serial.println("------------Loop Complete-------------");
+      }
+      delay(500);
+      if (((sampleNum2+1) % 10) == 0){
+        WriteStorage();
+      }
     }
   }else{
     maxVal2=next2;
+    Serial.print("currentAddress = HEX ");
+    Serial.write(currentAddress);
+    Serial.println(currentAddress);
+
+    Serial.print("SampleNumber = "); 
+    Serial.println(sampleNum2);
+    Serial.println("------------Loop Complete-------------");
   }
 
   ButtonInterrupt();
-  
-  if (next1>next2){
-    if (testMode){
-      Serial.print("currentAddress = HEX ");
-      Serial.write(currentAddress);
-      Serial.println();
-  
-      Serial.print("SampleNumber = "); 
-      Serial.println(sampleNum1);
-      Serial.println("------------Loop Complete-------------");
-      delay(500);
-      ButtonInterrupt();
-    }
-    delay(500);
-    if (((sampleNum1+1) % 10) == 0){
-      WriteStorage();
-      ButtonInterrupt();
-    }
-  }else{
-    if (testMode){
-      Serial.print("currentAddress = HEX ");
-      Serial.write(currentAddress);
-      Serial.println();
-  
-      Serial.print("SampleNumber = "); 
-      Serial.println(sampleNum2);
-      Serial.println("------------Loop Complete-------------");
-      delay(500);
-
-      ButtonInterrupt();
-    }
-    delay(500);
-    if (((sampleNum2+1) % 10) == 0){
-      WriteStorage();
-      ButtonInterrupt();
-    }
-  }
   
 }
 
@@ -158,7 +164,7 @@ void ButtonInterrupt(){
   unsigned char bytes[255];
   unsigned char value;
   
-  if (digitalRead(buttonPin) || sampleNum1>90 || sampleNum2>90){
+  if (digitalRead(buttonPin)==1 || sampleNum1>90 || sampleNum2>90){
     
     ble_begin();
     ble_set_name("SEED 15");
@@ -186,11 +192,6 @@ void ButtonInterrupt(){
         break;
         }
       }
-    
-      // Clear memory after sending the data
-      for (int i = 0 ; i < 1024 ; i++) {
-        EEPROM.update(i, 0);
-      }
     }
   }
   ble_do_events();
@@ -198,28 +199,28 @@ void ButtonInterrupt(){
 
 ///////////////////////Writing to EEPROM///////////////////////////////////////////////////
 void WriteStorage(){
-  EEPROM.writeInt(currentAddress,sessionCount);
+  EEPROM.updateInt(currentAddress,sessionCount);
   currentAddress = currentAddress + 2; //increase by int
-  EEPROM.writeByte(currentAddress,comma);
+  EEPROM.updateByte(currentAddress,comma);
   currentAddress++; //increase by char
-  EEPROM.writeFloat(currentAddress,arrayAvg1);
+  EEPROM.updateFloat(currentAddress,arrayAvg1);
   currentAddress = currentAddress + 4; //increase by float
-  EEPROM.writeByte(currentAddress,comma);
+  EEPROM.updateByte(currentAddress,comma);
   currentAddress++; //increase by char
-  EEPROM.writeFloat(currentAddress,arrayAvg2);
+  EEPROM.updateFloat(currentAddress,arrayAvg2);
   currentAddress = currentAddress + 4; //increase by float
-  EEPROM.writeByte(currentAddress,comma);
+  EEPROM.updateByte(currentAddress,comma);
   currentAddress++; //increase by char
-  EEPROM.writeFloat(currentAddress,sessionComp);
+  EEPROM.updateFloat(currentAddress,sessionComp);
   currentAddress = currentAddress + 4;  //increase by float
-  EEPROM.writeByte(currentAddress,sColon);
+  EEPROM.updateByte(currentAddress,sColon);
   currentAddress++; //increase by char
   if (sampleNum1>sampleNum2){
     if (sampleNum1<90){ //Not done - these addresses will be rewritten this session
     currentAddress = currentAddress - 18;
     }else{ //session is done
     sessionCount++;
-    EEPROM.writeInt(0,sessionCount);
+    EEPROM.updateInt(0,sessionCount);
     }
     if (testMode){
       Serial.write(sessionCount);
@@ -228,7 +229,7 @@ void WriteStorage(){
       Serial.print(',');
       Serial.print(arrayAvg2);
       Serial.print(',');
-      Serial.print(sessionComp);
+      Serial.print(sessionComp*100);
       Serial.println(';');
     }
   }else{
@@ -236,7 +237,7 @@ void WriteStorage(){
     currentAddress = currentAddress - 18;
     }else{ //session is done
     sessionCount++;
-    EEPROM.writeInt(0,sessionCount);
+    EEPROM.updateInt(0,sessionCount);
     }
     if (testMode){
       Serial.write(sessionCount);
@@ -245,7 +246,7 @@ void WriteStorage(){
       Serial.print(',');
       Serial.print(arrayAvg2);
       Serial.print(',');
-      Serial.print(sessionComp);
+      Serial.print(sessionComp*100);
       Serial.println(';');
     }
   }
@@ -263,7 +264,7 @@ void ArrayAdd(float intensityValue, int channel) {
         Serial.print("ArrayAvg = ");
         Serial.print(arrayAvg1);
         Serial.print(" and SessionComplete = ");
-        Serial.print(sessionComp);
+        Serial.print(sessionComp*100);
         Serial.println(" percent");
       }
     }else{
@@ -276,7 +277,7 @@ void ArrayAdd(float intensityValue, int channel) {
         Serial.print("ArrayAvg = ");
         Serial.print(arrayAvg2);
         Serial.print(" and SessionComplete = ");
-        Serial.print(sessionComp);
+        Serial.print(sessionComp*100);
         Serial.println(" percent");
       }
     }
@@ -492,7 +493,7 @@ float IntensityMap(int sensorValue){
 
     }
   }
-  //intensity = (intensity*4);
+  intensity = (intensity*2);
   if (testMode){
     Serial.print("Intensity = ");
     Serial.println(intensity);
