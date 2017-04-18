@@ -55,9 +55,7 @@ void setup(){
   if (testMode){ //start serial com
     Serial.begin(57600);
     Serial.print("SessionCount = ");
-    //Serial.println(sessionCount);
-    Serial.write(sessionCount);
-    Serial.println();
+    Serial.println(sessionCount);
   }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -90,7 +88,6 @@ void loop(){
       maxVal1=0;
       if (testMode){
         Serial.print("currentAddress = HEX ");
-        Serial.write(currentAddress);
         Serial.println(currentAddress);
     
         Serial.print("SampleNumber = "); 
@@ -107,7 +104,6 @@ void loop(){
   } else {
     maxVal1=next1;
     Serial.print("currentAddress = HEX ");
-    Serial.write(currentAddress);
     Serial.println(currentAddress);
 
     Serial.print("SampleNumber = "); 
@@ -131,10 +127,9 @@ void loop(){
       maxVal2=0;
       if (testMode){
         Serial.print("currentAddress = HEX ");
-        Serial.write(currentAddress);
         Serial.println(currentAddress);
     
-        Serial.print("SampleNumber = "); 
+        Serial.print("SampleNumber 2= "); 
         Serial.println(sampleNum2);
         Serial.println("------------Loop Complete-------------");
       }
@@ -146,10 +141,9 @@ void loop(){
   }else{
     maxVal2=next2;
     Serial.print("currentAddress = HEX ");
-    Serial.write(currentAddress);
     Serial.println(currentAddress);
 
-    Serial.print("SampleNumber = "); 
+    Serial.print("SampleNumber 2= "); 
     Serial.println(sampleNum2);
     Serial.println("------------Loop Complete-------------");
   }
