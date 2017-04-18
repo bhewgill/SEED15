@@ -1,5 +1,5 @@
 // EMPI Usage Monitoring
-// Blake Hewgill, University of Vermont
+// Blake Hewgill & Javier Bunuel, University of Vermont
 // Capstone Design, Spring 2017
 boolean testMode = true;
 
@@ -10,6 +10,9 @@ boolean testMode = true;
 #include <RBL_nRF8001.h>
 #include <services.h>
 
+
+
+
 int buttonPin = 8; // pin for sync button
 int LED1 = 2; // Status lights
 int LED2 = 3;
@@ -17,29 +20,40 @@ int LED3 = 4;
 int sensorPin1 = A0;    // select the input pin for channel 1
 int sensorPin2 = A1;    // select the input pin for channel 2
 int sensorValue = 0;  // variable to store the value coming from the sensor
-int sampleNum = 0;  // Sample number
-int sampleArray[140]; // Should be 90 samples in an hour long session (one each 40 seconds). Extras to be safe.
-long arrayTot = 0; // A running sum of the contents of sampleArray to be divided by sampleNum for averaging
-float arrayAvg = 0; // A running avg of the above
+int sampleNum1 = 90;  // Sample number
+int sampleNum2 = 0;  // Sample number
+int sampleArray1[140]; // Should be 90 samples in an hour long session (one each 40 seconds). Extras to be safe.
+long arrayTot1 = 0; // A running sum of the contents of sampleArray to be divided by sampleNum for averaging
+float arrayAvg1 = 0; // A running avg of the above
 int sampleArray2[140]; // Should be 90 samples in an hour long session (one each 40 seconds). Extras to be safe.
 long arrayTot2 = 0; // A running sum of the contents of sampleArray to be divided by sampleNum for averaging
 float arrayAvg2 = 0; // A running avg of the above
 int sessionCount; //= EEPROM.write(0, 0x00);
-int currentAddress; //= EEPROM.write(1,0x01); The above two lines reset board to default
+int currentAddress; //= EEPROM.write(1,0x15);
 char comma = ',';
-int nLine = 10; //corresponds to newline character
+char sColon = ';';
 float sessionComp;
+int ant1=0;
+int next1=0;
+int maxVal1=0;
+int ant2=0;
+int next2=0;
+int maxVal2=0;
 
 
 void setup(){
-  // Initialize what we need in here 
-  sessionCount = EEPROM.read(0);
-  currentAddress = EEPROM.read(2);
+  // Initialize what we need in here
+  EEPROM.setMaxAllowedWrites(32768);
+  EEPROM.writeInt(0,1);
+  EEPROM.writeInt(2,2);
+  sessionCount = EEPROM.readInt(0);
+  currentAddress = EEPROM.readInt(2);
+  // UPLOAD EEPROM SHITE
   pinMode(LED1, OUTPUT);
   pinMode(LED2, OUTPUT);
   pinMode(LED3, OUTPUT);
   if (testMode){ //start serial com
-    Serial.begin(9600);
+    Serial.begin(57600);
     Serial.print("SessionCount = ");
     //Serial.println(sessionCount);
     Serial.write(sessionCount);
@@ -48,48 +62,138 @@ void setup(){
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void loop(){
-    if (testMode){
+  ButtonInterrupt();
+  
+  if (testMode){
     Serial.println("TEST MODE ACTIVE");
-    }
-    if (analogRead(sensorPin1>5) || analogRead(sensorPin2)>5){
-  ArrayAdd(IntensityMap(ChannelSample()), sampleNum);
-    }
+  }
+  Serial.print("Pin1: ");
+  Serial.print(analogRead(sensorPin1));
+  Serial.print(" ; Pin2: ");
+  Serial.println(analogRead(sensorPin2));
+
   ButtonInterrupt();
 
-  if (testMode){
-    Serial.print("currentAddress = HEX ");
-    Serial.write(currentAddress);
-    Serial.println();
+  // Comparison Loop
+  // Channel 1
+  ant1=next1;
+  next1=analogRead(sensorPin1);
+  if (ant1>next1){
+    if (maxVal1>ant1){
+      maxVal1=ant1;
+      //SEND
+      Serial.print("MaxDigiVoltage = ");
+      Serial.println(maxVal1);
+      //Intensity Map
+      ArrayAdd(IntensityMap(maxVal1),1);
+      maxVal1=0;
+    }
+  } else {
+    maxVal1=next1;
+  }
 
-    Serial.print("SampleNumber = "); 
-    Serial.println(sampleNum);
-    Serial.println("------------Loop Complete-------------");
+  ButtonInterrupt();
+
+  // Channel 2
+  ant2=next2;
+  next2=analogRead(sensorPin2);
+  if (ant2>next2){
+    if (maxVal2>ant2){
+      maxVal2=ant2;
+      //SEND
+      Serial.print("MaxDigiVoltage = ");
+      Serial.println(maxVal2);
+      //Intensity Map
+      ArrayAdd(IntensityMap(maxVal2),2);
+      maxVal2=0;
+    }
+  }else{
+    maxVal2=next2;
+  }
+
+  ButtonInterrupt();
+  
+  if (next1>next2){
+    if (testMode){
+      Serial.print("currentAddress = HEX ");
+      Serial.write(currentAddress);
+      Serial.println();
+  
+      Serial.print("SampleNumber = "); 
+      Serial.println(sampleNum1);
+      Serial.println("------------Loop Complete-------------");
+      delay(500);
+      ButtonInterrupt();
+    }
     delay(500);
+    if (((sampleNum1+1) % 10) == 0){
+      WriteStorage();
+      ButtonInterrupt();
+    }
+  }else{
+    if (testMode){
+      Serial.print("currentAddress = HEX ");
+      Serial.write(currentAddress);
+      Serial.println();
+  
+      Serial.print("SampleNumber = "); 
+      Serial.println(sampleNum2);
+      Serial.println("------------Loop Complete-------------");
+      delay(500);
+
+      ButtonInterrupt();
+    }
+    delay(500);
+    if (((sampleNum2+1) % 10) == 0){
+      WriteStorage();
+      ButtonInterrupt();
+    }
   }
-  delay(500);
-  if (((sampleNum+1) % 10) == 0){
-    WriteStorage();
-  }
+  
 }
 
 ////////////Button Inter//////////////////////////////////////////////////////////
 void ButtonInterrupt(){
-  if (digitalRead(buttonPin)){
+  int address=0;
+  unsigned char bytes[255];
+  unsigned char value;
+  
+  if (digitalRead(buttonPin) || sampleNum1>90 || sampleNum2>90){
+    
     ble_begin();
+    ble_set_name("SEED 15");
+    Serial.println();
+    Serial.println("Initiated");
     while (!ble_connected()){
       ;
     }
-  }
-  if (ble_connected()){
-    /////// DO BLUETOOTH THIINGS HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  }
-  ble_do_events();
-
-  if (ble_available()){
-    while (ble_available()){
-      Serial.write(ble_read());
+    if (ble_connected()){
+      Serial.println("Connected");
+      while(true) {
+        value = EEPROM.readByte(address);
+      // Instead of EEPROM.length() we can put the number of bytes of the file if we know the extension
+      // avoiding sending many 0 in a row
+      while (address < 255) {
+        bytes[address]=value;
+        Serial.write(value);
+        address = address + 1;
+        value = EEPROM.readByte(address);
+      }
+      ble_write_bytes(bytes,255);
+      address = 0;
+      delay(1000); // We wait for an answer if its true, he has receive it so we go out of the loop, if not, we send it again
+      if (ble_read()==true) { // We may have to change true for the byte that corresponds to true
+        break;
+        }
+      }
+    
+      // Clear memory after sending the data
+      for (int i = 0 ; i < 1024 ; i++) {
+        EEPROM.update(i, 0);
+      }
     }
   }
+  ble_do_events();
 }
 
 ///////////////////////Writing to EEPROM///////////////////////////////////////////////////
@@ -98,7 +202,7 @@ void WriteStorage(){
   currentAddress = currentAddress + 2; //increase by int
   EEPROM.writeByte(currentAddress,comma);
   currentAddress++; //increase by char
-  EEPROM.writeFloat(currentAddress,arrayAvg);
+  EEPROM.writeFloat(currentAddress,arrayAvg1);
   currentAddress = currentAddress + 4; //increase by float
   EEPROM.writeByte(currentAddress,comma);
   currentAddress++; //increase by char
@@ -108,68 +212,75 @@ void WriteStorage(){
   currentAddress++; //increase by char
   EEPROM.writeFloat(currentAddress,sessionComp);
   currentAddress = currentAddress + 4;  //increase by float
-  EEPROM.writeByte(currentAddress,nLine);
-  currentAddress = currentAddress + 2; //increase by newline char
-  if (sampleNum<90){ //Not done - these addresses will be rewritten this session
-    currentAddress = currentAddress - 19;
-  }
-  else{ //session is done
+  EEPROM.writeByte(currentAddress,sColon);
+  currentAddress++; //increase by char
+  if (sampleNum1>sampleNum2){
+    if (sampleNum1<90){ //Not done - these addresses will be rewritten this session
+    currentAddress = currentAddress - 18;
+    }else{ //session is done
     sessionCount++;
     EEPROM.writeInt(0,sessionCount);
-  }
-  if (testMode){
-    Serial.write(sessionCount);
-    Serial.print(',');
-    Serial.print(arrayAvg);
-    Serial.print(',');
-    Serial.print(arrayAvg2);
-    Serial.print(',');
-    Serial.print(sessionComp);
-    Serial.println(';');
+    }
+    if (testMode){
+      Serial.write(sessionCount);
+      Serial.print(',');
+      Serial.print(arrayAvg1);
+      Serial.print(',');
+      Serial.print(arrayAvg2);
+      Serial.print(',');
+      Serial.print(sessionComp);
+      Serial.println(';');
+    }
+  }else{
+    if (sampleNum2<90){ //Not done - these addresses will be rewritten this session
+    currentAddress = currentAddress - 18;
+    }else{ //session is done
+    sessionCount++;
+    EEPROM.writeInt(0,sessionCount);
+    }
+    if (testMode){
+      Serial.write(sessionCount);
+      Serial.print(',');
+      Serial.print(arrayAvg1);
+      Serial.print(',');
+      Serial.print(arrayAvg2);
+      Serial.print(',');
+      Serial.print(sessionComp);
+      Serial.println(';');
+    }
   }
 }
 //////////////////////////////////////////////////////////////////////////////////////////
-void ArrayAdd(float intensityValue, int sampNum){
+void ArrayAdd(float intensityValue, int channel) {
   if (intensityValue>0){
-  sampleArray[sampNum] = intensityValue;
-  sampleArray2[sampNum] = intensityValue;
-  sampleNum++;
-  arrayTot = arrayTot + intensityValue;
-  arrayTot2 = arrayTot2 + intensityValue;
-  arrayAvg = arrayTot/(sampNum+1);
-  arrayAvg2 = arrayTot2/(sampNum+1);
-  sessionComp = float(sampNum)/90;
-  }
-  if (testMode){
-  Serial.print("ArrayAvg = ");
-  Serial.print(arrayAvg);
-  Serial.print(" and SessionComplete = ");
-  Serial.print(sessionComp);
-  Serial.println(" percent");
-  }
-}
-//////////////////////////////////////////////////////////////////////////////////////////
-int ChannelSample(){ // Return the highest analog input value
-  int maxVolt = 0;
-  int maxVolt2 = 0;
-//  if (testMode && ((analogRead(sensorPin1) < 5) && (analogRead(sensorPin2) < 5))){
-//    Serial.println("Nothing to be read");
-//    ButtonInterrupt();
-//    
-//  }
-  while (analogRead(sensorPin1)>5 || analogRead(sensorPin2)>5){
-    if (analogRead(sensorPin1)>maxVolt){
-      maxVolt = analogRead(sensorPin1);
-    }
-    if (analogRead(sensorPin2)>maxVolt2){
-      maxVolt2 = analogRead(sensorPin2);
+    if (channel==1){
+      sampleArray1[sampleNum1] = intensityValue;
+      sampleNum1++;
+      arrayTot1 = arrayTot1 + intensityValue;
+      arrayAvg1 = arrayTot1/(sampleNum1+1);
+      sessionComp = float(sampleNum1)/90;
+      if (testMode){
+        Serial.print("ArrayAvg = ");
+        Serial.print(arrayAvg1);
+        Serial.print(" and SessionComplete = ");
+        Serial.print(sessionComp);
+        Serial.println(" percent");
+      }
+    }else{
+      sampleArray2[sampleNum2] = intensityValue;
+      sampleNum2++;
+      arrayTot2 = arrayTot2 + intensityValue;
+      arrayAvg2 = arrayTot2/(sampleNum2+1);
+      sessionComp = float(sampleNum2)/90;
+      if (testMode){
+        Serial.print("ArrayAvg = ");
+        Serial.print(arrayAvg2);
+        Serial.print(" and SessionComplete = ");
+        Serial.print(sessionComp);
+        Serial.println(" percent");
+      }
     }
   }
-  if (testMode){
-  Serial.print("MaxDigiVoltage = ");
-  Serial.println(maxVolt);
-  }
-  return maxVolt;
 }
 ///////////////////////////////////////////////////////////////////////////////////////////
 float IntensityMap(int sensorValue){
@@ -388,4 +499,3 @@ float IntensityMap(int sensorValue){
   }
   return intensity;
 }
-
