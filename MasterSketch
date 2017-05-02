@@ -20,8 +20,8 @@ int LED3 = 4;
 int sensorPin1 = A0;    // select the input pin for channel 1
 int sensorPin2 = A1;    // select the input pin for channel 2
 int sensorValue = 0;  // variable to store the value coming from the sensor
-int sampleNum1 = 0;  // Sample number
-int sampleNum2 = 0;  // Sample number
+int sampleNum1 = 1;  // Sample number
+int sampleNum2 = 1;  // Sample number
 int sampleArray1[140]; // Should be 90 samples in an hour long session (one each 40 seconds). Extras to be safe.
 long arrayTot1 = 0; // A running sum of the contents of sampleArray to be divided by sampleNum for averaging
 float arrayAvg1 = 0; // A running avg of the above
@@ -43,12 +43,10 @@ int maxVal2=0;
 
 void setup(){
   // Initialize what we need in here
-  EEPROM.setMaxAllowedWrites(32768);
-  EEPROM.writeInt(0,1);
-  EEPROM.writeInt(2,2);
+  EEPROM.setMaxAllowedWrites(32766);
   sessionCount = EEPROM.readInt(0);
   currentAddress = EEPROM.readInt(2);
-  // UPLOAD EEPROM SHITE
+  // UPLOAD EEPROM
   pinMode(LED1, OUTPUT);
   pinMode(LED2, OUTPUT);
   pinMode(LED3, OUTPUT);
@@ -217,7 +215,7 @@ void WriteStorage(){
     EEPROM.updateInt(0,sessionCount);
     }
     if (testMode){
-      Serial.write(sessionCount);
+      Serial.print(sessionCount);
       Serial.print(',');
       Serial.print(arrayAvg1);
       Serial.print(',');
@@ -234,7 +232,7 @@ void WriteStorage(){
     EEPROM.updateInt(0,sessionCount);
     }
     if (testMode){
-      Serial.write(sessionCount);
+      Serial.print(sessionCount);
       Serial.print(',');
       Serial.print(arrayAvg1);
       Serial.print(',');
@@ -252,7 +250,7 @@ void ArrayAdd(float intensityValue, int channel) {
       sampleArray1[sampleNum1] = intensityValue;
       sampleNum1++;
       arrayTot1 = arrayTot1 + intensityValue;
-      arrayAvg1 = arrayTot1/(sampleNum1+1);
+      arrayAvg1 = arrayTot1/(sampleNum1);
       sessionComp = float(sampleNum1)/90;
       if (testMode){
         Serial.print("ArrayAvg = ");
@@ -265,7 +263,7 @@ void ArrayAdd(float intensityValue, int channel) {
       sampleArray2[sampleNum2] = intensityValue;
       sampleNum2++;
       arrayTot2 = arrayTot2 + intensityValue;
-      arrayAvg2 = arrayTot2/(sampleNum2+1);
+      arrayAvg2 = arrayTot2/(sampleNum2);
       sessionComp = float(sampleNum2)/90;
       if (testMode){
         Serial.print("ArrayAvg = ");
