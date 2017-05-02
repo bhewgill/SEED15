@@ -16,7 +16,6 @@ boolean testMode = true;
 int buttonPin = 8; // pin for sync button
 int LED1 = 2; // Status lights
 int LED2 = 3;
-int LED3 = 4;
 int sensorPin1 = A0;    // select the input pin for channel 1
 int sensorPin2 = A1;    // select the input pin for channel 2
 int sensorValue = 0;  // variable to store the value coming from the sensor
@@ -49,7 +48,7 @@ void setup(){
   // UPLOAD EEPROM
   pinMode(LED1, OUTPUT);
   pinMode(LED2, OUTPUT);
-  pinMode(LED3, OUTPUT);
+  digitalWrite(LED1,HIGH);
   if (testMode){ //start serial com
     Serial.begin(57600);
     Serial.print("SessionCount = ");
@@ -157,7 +156,7 @@ void ButtonInterrupt(){
   unsigned char value;
   
   if (digitalRead(buttonPin)==1 || sampleNum1>90 || sampleNum2>90){
-    
+
     ble_begin();
     ble_set_name("SEED 15");
     Serial.println();
@@ -166,6 +165,7 @@ void ButtonInterrupt(){
       ;
     }
     if (ble_connected()){
+      digitalWrite(LED2,HIGH);
       Serial.println("Connected");
       while(true) {
         value = EEPROM.readByte(address);
@@ -187,6 +187,7 @@ void ButtonInterrupt(){
     }
   }
   ble_do_events();
+  digitalWrite(LED2,LOW);
 }
 
 ///////////////////////Writing to EEPROM///////////////////////////////////////////////////
